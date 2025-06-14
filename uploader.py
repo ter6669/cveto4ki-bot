@@ -1,37 +1,45 @@
 import os
-from moviepy.editor import ImageSequenceClip, AudioFileClip, vfx
+import tempfile
+from PIL import Image, ImageOps
+from moviepy.editor import ImageSequenceClip, AudioFileClip
+import random
 
-def create_video_with_music(images_folder, music_folder, output_path):
-    # Берём изображения из папки
-    image_files = sorted([os.path.join(images_folder, f) for f in os.listdir(images_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
-    if not image_files:
-        raise Exception("В папке videos нет фотографий!")
+def make_bw_frames_and_save(image_folder, size=(720, 720)):
+    files = [os.path.join(image_folder, f) for f in os.listdir(image_folder)
+             if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+    temp_dir = tempfile.mkdtemp()
+    saved_files = []
+    for i, f in enumerate(sorted(files)):
+        img = Image.open(f)
+        img = ImageOps.grayscale(img)
+        img = img.resize(size, Image.ANTIALIAS)
+        save_path = os.path.join(temp_dir, f"frame_{i}.png")
+        img.save(save_path)
+        saved_files.append(save_path)
+    return saved_files
 
-    # Создаём видео из фото с fps=2 (примерно 5 секунд на 10 фото)
-    clip = ImageSequenceClip(image_files, fps=2)
-
-    # Делаем видео чёрно-белым
-    clip = clip.fx(vfx.blackwhite)
-
-    # Берём первый mp3 из папки music
-    music_files = [os.path.join(music_folder, f) for f in os.listdir(music_folder) if f.lower().endswith('.mp3')]
+def pick_random_music(music_folder):
+    music_files = [os.path.join(music_folder, f) for f in os.listdir(music_folder)
+                   if f.lower().endswith(".mp3")]
     if not music_files:
-        raise Exception("В папке music нет mp3 файлов!")
+        raise Exception("Нет музыки в папке music!")
+    return random.choice(music_files)
 
-    audio = AudioFileClip(music_files[0]).subclip(0, clip.duration)
+def create_video(image_folder, music_folder, output_path="output.mp4"):
+    frames = make_bw_frames_and_save(image_folder)
+    audio_path = pick_random_music(music_folder)
+    
+    clip = ImageSequenceClip(frames, fps=1)  # 1 кадр в секунду, можно менять
+    audio = AudioFileClip(audio_path).subclip(0, min(clip.duration, 10))  # максимум 10 секунд
+    
+    clip = clip.set_audio(audio)
+    clip.write_videofile(output_path, codec="libx264", audio_codec="aac", verbose=False, logger=None)
+    
+    return output_path
 
-    # Добавляем аудио к видео
-    final_clip = clip.set_audio(audio)
-
-    # Сохраняем видео
-    final_clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
-
-def upload_reels(username, password, video_folder):
-    output_video = "output_video.mp4"
-    create_video_with_music(video_folder, "music", output_video)
-
-    # Здесь добавить логику загрузки видео в Instagram, например:
-    # from instagrapi import Client
-    # cl = Client()
-    # cl.login(username, password)
-    # cl.video_upload(output_video, caption="Автоматический Reels от Цветочки 🌸")
+def upload_reels(username, password, video_folder, music_folder):
+    # Тут должен быть код загрузки видео в Instagram через instagrapi
+    # Пока заглушка, т.к. инстаграм и заливка сложные
+    video_path = create_video(video_folder, music_folder)
+    print(f"Видео готово: {video_path}")
+    # Здесь будет логика заливки в Instagram с instagrapi (если нужна - скажи)
