@@ -1,9 +1,13 @@
+import os
 from aiogram import Bot, Dispatcher, types, executor
-import json, os
 from uploader import upload_reels
 
-with open("config.json") as f:
-    config = json.load(f)
+config = {
+    "bot_token": os.getenv("BOT_TOKEN"),
+    "inst_username": os.getenv("INST_USERNAME"),
+    "inst_password": os.getenv("INST_PASSWORD"),
+    "video_folder": os.getenv("VIDEO_FOLDER", "videos/")
+}
 
 bot = Bot(token=config["bot_token"])
 dp = Dispatcher(bot)
