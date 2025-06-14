@@ -1,48 +1,37 @@
 import os
-from moviepy.editor import ImageSequenceClip, AudioFileClip, CompositeAudioClip
-from instagrapi import Client
-from PIL import Image, ImageOps
-import random
-import urllib.request
+from moviepy.editor import ImageSequenceClip, AudioFileClip, vfx
 
-def download_techno_music(dest_path="techno.mp3"):
-    # Пример скачивания бесплатной музыки с URL (замени на рабочий URL)
-    url = "https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Scott_Holmes/Corporate__Motivational_Music/Scott_Holmes_-_Techno_Workout.mp3"
-    urllib.request.urlretrieve(url, dest_path)
+def create_video_with_music(images_folder, music_folder, output_path):
+    # Берём изображения из папки
+    image_files = sorted([os.path.join(images_folder, f) for f in os.listdir(images_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
+    if not image_files:
+        raise Exception("В папке videos нет фотографий!")
 
-def create_bw_images(folder):
-    files = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith(('.jpg','.jpeg','.png'))]
-    bw_folder = os.path.join(folder, "bw")
-    if not os.path.exists(bw_folder):
-        os.makedirs(bw_folder)
-    bw_files = []
-    for f in files:
-        img = Image.open(f).convert("L")  # ч/б
-        bw_path = os.path.join(bw_folder, os.path.basename(f))
-        img.save(bw_path)
-        bw_files.append(bw_path)
-    return bw_files
+    # Создаём видео из фото с fps=2 (примерно 5 секунд на 10 фото)
+    clip = ImageSequenceClip(image_files, fps=2)
 
-def create_video_from_images(images, output_path="output.mp4", fps=1):
-    clip = ImageSequenceClip(images, fps=fps)
-    # Скачиваем музыку
-    music_path = "techno.mp3"
-    if not os.path.exists(music_path):
-        download_techno_music(music_path)
-    audio_clip = AudioFileClip(music_path).subclip(0, len(images)*5)
-    clip = clip.set_audio(audio_clip)
-    clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
-    return output_path
+    # Делаем видео чёрно-белым
+    clip = clip.fx(vfx.blackwhite)
+
+    # Берём первый mp3 из папки music
+    music_files = [os.path.join(music_folder, f) for f in os.listdir(music_folder) if f.lower().endswith('.mp3')]
+    if not music_files:
+        raise Exception("В папке music нет mp3 файлов!")
+
+    audio = AudioFileClip(music_files[0]).subclip(0, clip.duration)
+
+    # Добавляем аудио к видео
+    final_clip = clip.set_audio(audio)
+
+    # Сохраняем видео
+    final_clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
 
 def upload_reels(username, password, video_folder):
-    cl = Client()
-    cl.login(username, password)
-    bw_images = create_bw_images(video_folder)
-    video_path = create_video_from_images(bw_images, "reels.mp4")
-    cl.video_upload(video_path, "Авто-бот загружает Reels с техно и ч/б фото")
-    os.remove(video_path)
-    # Очистка ч/б папки
-    bw_folder = os.path.join(video_folder, "bw")
-    if os.path.exists(bw_folder):
-        for f in os.listdir(bw_folder):
-            os.remove(os.path.join(bw_folder, f))
+    output_video = "output_video.mp4"
+    create_video_with_music(video_folder, "music", output_video)
+
+    # Здесь добавить логику загрузки видео в Instagram, например:
+    # from instagrapi import Client
+    # cl = Client()
+    # cl.login(username, password)
+    # cl.video_upload(output_video, caption="Автоматический Reels от Цветочки 🌸")
