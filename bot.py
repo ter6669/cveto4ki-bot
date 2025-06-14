@@ -11,9 +11,8 @@ dp = Dispatcher(bot)
 
 @dp.message_handler(commands=["start"])
 async def start(msg: types.Message):
-    await msg.answer("Цветочки 🌸 запустились! Заливаю Reels...")
+    await msg.answer("Цветочки 🌸 запустились! Создаю и заливаю Reels...")
 
-    # Запускаем в отдельном потоке, чтобы не блокировать бота
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, upload_reels,
                                config["inst_username"],
@@ -21,7 +20,7 @@ async def start(msg: types.Message):
                                config["video_folder"],
                                config["music_folder"])
 
-    await msg.answer("Готово! Видео созданы и залиты (если реализовано).")
+    await msg.answer("Готово! Видео созданы и загружены в Instagram.")
 
 if __name__ == "__main__":
     executor.start_polling(dp)
