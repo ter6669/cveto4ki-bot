@@ -1,50 +1,46 @@
 import os
-import tempfile
 from PIL import Image, ImageOps
 from moviepy.editor import ImageSequenceClip, AudioFileClip
-import random
 from instagrapi import Client
+import random
 
-def make_bw_frames_and_save(image_folder, size=(720, 720)):
-    files = [os.path.join(image_folder, f) for f in os.listdir(image_folder)
-             if f.lower().endswith((".jpg", ".jpeg", ".png"))]
-    temp_dir = tempfile.mkdtemp()
-    saved_files = []
-    for i, f in enumerate(sorted(files)):
-        img = Image.open(f)
-        img = ImageOps.grayscale(img)
-        img = img.resize(size, Image.ANTIALIAS)
-        save_path = os.path.join(temp_dir, f"frame_{i}.png")
-        img.save(save_path)
-        saved_files.append(save_path)
-    return saved_files
+def make_bw_frames_and_save(image_folder, output_size=(720, 1280)):
+    output_folder = os.path.join(image_folder, "frames")
+    os.makedirs(output_folder, exist_ok=True)
 
-def pick_random_music(music_folder):
-    music_files = [os.path.join(music_folder, f) for f in os.listdir(music_folder)
-                   if f.lower().endswith(".mp3")]
-    if not music_files:
-        raise Exception("Нет музыки в папке music!")
-    return random.choice(music_files)
+    frames = []
+    for filename in sorted(os.listdir(image_folder)):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            img_path = os.path.join(image_folder, filename)
+            img = Image.open(img_path)
 
-def create_video(image_folder, music_folder, output_path="output.mp4"):
+            img = ImageOps.fit(img, output_size, method=Image.Resampling.LANCZOS)
+            img = ImageOps.grayscale(img)
+
+            frame_path = os.path.join(output_folder, filename)
+            img.save(frame_path)
+            frames.append(frame_path)
+
+    return frames
+
+def create_video(image_folder, music_folder, output_file="output.mp4"):
     frames = make_bw_frames_and_save(image_folder)
-    audio_path = pick_random_music(music_folder)
-    
-    clip = ImageSequenceClip(frames, fps=1)  # 1 кадр в секунду, можно менять
-    audio = AudioFileClip(audio_path).subclip(0, min(clip.duration, 10))  # максимум 10 секунд
-    
-    clip = clip.set_audio(audio)
-    clip.write_videofile(output_path, codec="libx264", audio_codec="aac", verbose=False, logger=None)
-    
-    return output_path
+    clip = ImageSequenceClip(frames, fps=1.5)
+
+    music_files = [f for f in os.listdir(music_folder) if f.endswith('.mp3')]
+    if not music_files:
+        raise Exception("Нет музыкальных файлов в папке music")
+    music_path = os.path.join(music_folder, random.choice(music_files))
+
+    audio = AudioFileClip(music_path).subclip(0, clip.duration)
+    final = clip.set_audio(audio)
+
+    final.write_videofile(output_file, codec="libx264", audio_codec="aac")
+    return output_file
 
 def upload_reels(username, password, video_folder, music_folder):
     video_path = create_video(video_folder, music_folder)
-    print(f"Видео готово: {video_path}")
 
     cl = Client()
     cl.login(username, password)
-    print("Вход в Instagram выполнен")
-
-    cl.clip_upload(video_path, caption="Это сгенерировано ИИ #авто #техно #цветочки")
-    print("Видео загружено в Instagram")
+    cl.clip_upload(video_path, caption="Это сгенерировал ИИ 🤖")
