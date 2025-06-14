@@ -3,6 +3,7 @@ import tempfile
 from PIL import Image, ImageOps
 from moviepy.editor import ImageSequenceClip, AudioFileClip
 import random
+from instagrapi import Client
 
 def make_bw_frames_and_save(image_folder, size=(720, 720)):
     files = [os.path.join(image_folder, f) for f in os.listdir(image_folder)
@@ -38,8 +39,12 @@ def create_video(image_folder, music_folder, output_path="output.mp4"):
     return output_path
 
 def upload_reels(username, password, video_folder, music_folder):
-    # Тут должен быть код загрузки видео в Instagram через instagrapi
-    # Пока заглушка, т.к. инстаграм и заливка сложные
     video_path = create_video(video_folder, music_folder)
     print(f"Видео готово: {video_path}")
-    # Здесь будет логика заливки в Instagram с instagrapi (если нужна - скажи)
+
+    cl = Client()
+    cl.login(username, password)
+    print("Вход в Instagram выполнен")
+
+    cl.clip_upload(video_path, caption="Это сгенерировано ИИ #авто #техно #цветочки")
+    print("Видео загружено в Instagram")
