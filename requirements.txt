@@ -1,4 +1,4 @@
-moviepy
+moviepy==1.0.3
 pillow
 aiogram==2.25.1
 instagrapi==1.15.6
